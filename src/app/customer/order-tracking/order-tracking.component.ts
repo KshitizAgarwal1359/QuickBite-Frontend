@@ -61,6 +61,14 @@ declare var L: any;
             @if (order.orderStatus === 'PLACED' || order.orderStatus === 'CONFIRMED') {
               <button class="btn btn-danger btn-block mt-16" (click)="cancelOrder()">Cancel Order</button>
             }
+            @if (order.orderStatus === 'CANCELLED') {
+              <div class="mt-16 p-12 text-sm" style="background: var(--surface-hover); border-left: 3px solid var(--danger); border-radius: var(--radius-sm);">
+                <strong>Order Cancelled.</strong>
+                @if (order.modeOfPayment !== 'COD') {
+                  <p class="mt-4">Your refund has been initiated and will be processed to your original payment method shortly.</p>
+                }
+              </div>
+            }
 
             @if ((order.orderStatus === 'PICKED_UP' || order.orderStatus === 'DELIVERED') && agent) {
               <div class="live-map mt-24">

@@ -48,7 +48,7 @@ interface RefundableItem {
                 <p class="text-sm mt-4 text-muted">Paid on {{ item.payment.paidAt | date:'short' }}</p>
 
                 <div class="mt-16 flex gap-8">
-                  @if (item.payment.status === 'COMPLETED' && item.order?.orderStatus === 'CANCELLED') {
+                  @if (item.payment.status === 'PAID' && item.order?.orderStatus === 'CANCELLED') {
                     <button class="btn btn-danger btn-sm btn-block" (click)="processRefund(item.payment)">Process Refund</button>
                   } @else if (item.payment.status === 'REFUNDED') {
                     <p class="text-success font-bold mt-8">✓ Refund processed on {{ item.payment.refundedAt | date:'short' }}</p>
@@ -80,8 +80,8 @@ export class RefundsComponent implements OnInit {
     this.loading = true;
     this.paymentApi.getAllPayments().subscribe({
       next: (payments) => {
-        // Filter out COD, as they don't get refunded. Keep COMPLETED and REFUNDED for visibility.
-        const nonCod = payments.filter(p => p.mode !== 'COD' && (p.status === 'COMPLETED' || p.status === 'REFUNDED'));
+        // Filter out COD, as they don't get refunded. Keep PAID and REFUNDED for visibility.
+        const nonCod = payments.filter(p => p.mode !== 'COD' && (p.status === 'PAID' || p.status === 'REFUNDED'));
         
         if (nonCod.length === 0) {
           this.items = [];
@@ -125,7 +125,7 @@ export class RefundsComponent implements OnInit {
   }
 
   getBadge(status: string) {
-    if (status === 'COMPLETED') return 'success';
+    if (status === 'PAID') return 'success';
     if (status === 'REFUNDED') return 'info';
     return 'warning';
   }
