@@ -49,25 +49,35 @@ export class AgentDashboardComponent implements OnInit {
   agent: AgentResponse | null = null; loading = true;
   watchId: number | null = null;
   constructor(private deliveryApi: DeliveryApiService, private auth: AuthApiService, private toast: ToastService) {}
+
   ngOnInit() {
     this.loadAgent();
   }
+
   loadAgent() {
-    const storedAgentId = sessionStorage.getItem('qb_agent_id');
-    if (storedAgentId) {
-      this.deliveryApi.getAgent(Number(storedAgentId)).subscribe({
-        next: (a) => { this.agent = a; this.loading = false; },
-        error: () => { this.loading = false; }
-      });
-    } else {
-      this.loading = false;
-    }
+    this.loading = true;
+    // Always resolve identity from the JWT via /agents/me — never trust a stored ID alone.
+    // This handles the case where the agent logs out and back in (sessionStorage cleared).
+    this.deliveryApi.getMyProfile().subscribe({
+      next: (a) => {
+        this.agent = a;
+        // Cache the resolved agentId for use by other components this session
+        sessionStorage.setItem('qb_agent_id', a.agentId.toString());
+        this.loading = false;
+      },
+      error: () => {
+        // 404 means the user has not registered as an agent yet — show "Register Now"
+        this.agent = null;
+        this.loading = false;
+      }
+    });
   }
+
   toggleAvail() {
     this.deliveryApi.setAvailability(this.agent!.agentId, !this.agent!.isAvailable).subscribe({
-      next: (a) => { 
-        this.agent = a; 
-        this.toast.success(a.isAvailable ? 'You are now online!' : 'You are now offline.'); 
+      next: (a) => {
+        this.agent = a;
+        this.toast.success(a.isAvailable ? 'You are now online!' : 'You are now offline.');
         if (a.isAvailable) {
           this.startGpsTracking();
         } else {
@@ -82,9 +92,9 @@ export class AgentDashboardComponent implements OnInit {
     if ('geolocation' in navigator) {
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          this.deliveryApi.updateLocation(this.agent!.agentId, { 
-             latitude: pos.coords.latitude, 
-             longitude: pos.coords.longitude 
+          this.deliveryApi.updateLocation(this.agent!.agentId, {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
           }).subscribe();
         },
         (err) => console.error('GPS error:', err),

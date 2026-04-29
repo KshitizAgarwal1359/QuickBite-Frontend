@@ -16,7 +16,7 @@ export class RestaurantApiService {
   getByCuisine(type: string): Observable<RestaurantResponse[]> { return this.http.get<RestaurantResponse[]>(`${this.baseUrl}/cuisine/${type}`); }
   getByCity(city: string): Observable<RestaurantResponse[]> { return this.http.get<RestaurantResponse[]>(`${this.baseUrl}/city/${city}`); }
   getNearby(lat: number, lng: number, radius: number = 5): Observable<RestaurantResponse[]> { return this.http.get<RestaurantResponse[]>(`${this.baseUrl}/nearby?latitude=${lat}&longitude=${lng}&radiusInKm=${radius}`); }
-  search(keyword: string): Observable<RestaurantResponse[]> { return this.http.get<RestaurantResponse[]>(`${this.baseUrl}/search?keyword=${keyword}`); }
+  search(keyword: string): Observable<RestaurantResponse[]> { return this.http.get<RestaurantResponse[]>(`${this.baseUrl}/search?keyword=${encodeURIComponent(keyword)}`); }
   update(id: number, request: UpdateRestaurantRequest): Observable<RestaurantResponse> { return this.http.put<RestaurantResponse>(`${this.baseUrl}/${id}`, request); }
   approve(id: number): Observable<RestaurantResponse> { return this.http.put<RestaurantResponse>(`${this.baseUrl}/${id}/approve`, {}); }
   toggleOpen(id: number): Observable<RestaurantResponse> { return this.http.put<RestaurantResponse>(`${this.baseUrl}/${id}/toggleOpen`, {}); }

@@ -4,8 +4,6 @@ import { DeliveryApiService } from '../../core/services/delivery-api.service';
 import { OrderApiService } from '../../core/services/order-api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OrderResponse } from '../../core/models/api.models';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-agent-active-deliveries',
@@ -18,6 +16,9 @@ import { catchError } from 'rxjs/operators';
         <button class="btn btn-outline btn-sm" (click)="loadDeliveries()">🔄 Refresh</button>
       </div>
       @if (loading) { <div class="loading-spinner"></div> }
+      @else if (!agentId) {
+        <div class="empty-state"><h3>Agent profile not found</h3><p>Please complete agent registration and log in as an agent.</p></div>
+      }
       @else if (orders.length === 0) {
         <div class="empty-state"><h3>No active deliveries</h3><p>You'll see assigned orders here when they arrive.</p></div>
       } @else {
@@ -29,6 +30,7 @@ import { catchError } from 'rxjs/operators';
                   <h3>Order #{{ order.orderId }}</h3>
                   <span class="badge badge-info">{{ order.orderStatus }}</span>
                 </div>
+                <p class="text-sm mt-4"><strong>Deliver to:</strong> {{ order.deliveryAddress }}</p>
                 <p class="text-sm mt-4"><strong>Total Amount:</strong> ₹{{ order.finalAmount }}</p>
                 <div class="mt-16">
                   <button class="btn btn-success btn-block" (click)="completeDelivery(order.orderId)">✓ Complete Delivery</button>
@@ -53,32 +55,34 @@ export class AgentActiveDeliveriesComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const storedId = localStorage.getItem('qb_agent_id');
-    if (storedId) {
-      this.agentId = Number(storedId);
-      this.loadDeliveries();
-    } else {
-      this.loading = false;
-    }
+    // Resolve agent identity from JWT via /agents/me — works even after a fresh login
+    // (sessionStorage 'qb_agent_id' is only a best-effort cache; we don't rely on it here)
+    this.deliveryApi.getMyProfile().subscribe({
+      next: (agent) => {
+        this.agentId = agent.agentId;
+        sessionStorage.setItem('qb_agent_id', agent.agentId.toString());
+        this.loadDeliveries();
+      },
+      error: () => {
+        // Agent has not registered yet
+        this.loading = false;
+      }
+    });
   }
 
   loadDeliveries() {
     if (!this.agentId) return;
     this.loading = true;
-    this.deliveryApi.getActiveDeliveries(this.agentId).subscribe({
-      next: (orderIds) => {
-        if (orderIds.length === 0) {
-          this.orders = [];
-          this.loading = false;
-          return;
-        }
-        const requests = orderIds.map(id => this.orderApi.getOrder(id).pipe(catchError(() => of(null))));
-        forkJoin(requests).subscribe(results => {
-          this.orders = results.filter((o): o is OrderResponse => o !== null);
-          this.loading = false;
-        });
+    // Query Order Service directly for orders assigned to this agent
+    this.orderApi.getAgentOrders(this.agentId).subscribe({
+      next: (orders) => {
+        this.orders = orders;
+        this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: (e) => {
+        this.toast.error(e.error?.message || 'Failed to load deliveries');
+        this.loading = false;
+      }
     });
   }
 

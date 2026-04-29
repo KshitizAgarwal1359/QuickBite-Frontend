@@ -20,8 +20,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const handle401 = (error: HttpErrorResponse) => {
     if (error.status === 401) {
       auth.clearAuth();
-      router.navigate(['/login']);
-      return EMPTY;
+      if (router.url !== '/login') {
+        router.navigate(['/login']);
+      }
     }
     return throwError(() => error);
   };

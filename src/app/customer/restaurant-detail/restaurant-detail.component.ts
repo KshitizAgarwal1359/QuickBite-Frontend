@@ -18,7 +18,11 @@ import { catchError, finalize } from 'rxjs/operators';
     <div class="page container">
       @if (loading) { <div class="loading-spinner"></div> }
       @else if (restaurant) {
-        <div class="restaurant-header" [style.background]="'linear-gradient(135deg, #1A1A2E, #16213E)'">
+        <div class="restaurant-header">
+          @if (restaurant.imageUrl) {
+            <img [src]="restaurant.imageUrl" class="rh-bg-img" alt="" (error)="onBannerError($event)" />
+            <div class="rh-overlay"></div>
+          }
           <div class="rh-content">
             <h1>{{ restaurant.name }}</h1>
             <p>{{ restaurant.description }}</p>
@@ -29,6 +33,8 @@ import { catchError, finalize } from 'rxjs/operators';
             </div>
           </div>
         </div>
+
+
 
         <div class="menu-controls flex-between mt-24 mb-16">
           <h2>Menu</h2>
@@ -52,7 +58,7 @@ import { catchError, finalize } from 'rxjs/operators';
             <div class="grid grid-2">
               @for (item of getFilteredItems(cat); track item.itemId) {
                 <div class="card menu-item-card">
-                  <div class="card-body flex-between">
+                  <div class="card-body mi-row">
                     <div class="mi-info">
                       <span [class]="item.isVeg ? 'badge badge-veg' : 'badge badge-nonveg'">{{ item.isVeg ? '● Veg' : '● Non-veg' }}</span>
                       <h4>{{ item.name }}</h4>
@@ -66,16 +72,26 @@ import { catchError, finalize } from 'rxjs/operators';
                         }
                       </div>
                       @if (item.calories) { <span class="text-sm text-muted">{{ item.calories }} cal</span> }
+                      <div class="mi-action-row mt-8">
+                        @if (item.isAvailable && restaurant.isOpen) {
+                          <button class="btn btn-primary btn-sm" (click)="addToCart(item)">Add +</button>
+                        } @else if (!item.isAvailable) {
+                          <span class="badge badge-error">Unavailable</span>
+                        } @else {
+                          <span class="badge badge-warning">Closed</span>
+                        }
+                      </div>
                     </div>
-                    <div class="mi-action">
-                      @if (item.isAvailable && restaurant.isOpen) {
-                        <button class="btn btn-primary btn-sm" (click)="addToCart(item)">Add +</button>
-                      } @else if (!item.isAvailable) {
-                        <span class="badge badge-error">Unavailable</span>
-                      } @else {
-                        <span class="badge badge-warning">Closed</span>
-                      }
-                    </div>
+                    @if (item.imageUrl) {
+                      <div class="mi-image-wrap">
+                        <img
+                          [src]="item.imageUrl"
+                          [alt]="item.name"
+                          class="mi-image"
+                          (error)="onImgError($event)"
+                        />
+                      </div>
+                    }
                   </div>
                 </div>
               }
@@ -93,15 +109,21 @@ import { catchError, finalize } from 'rxjs/operators';
     </div>
   `,
   styles: [`
-    .restaurant-header { border-radius: var(--radius-lg); padding: 40px 32px; margin-bottom: 8px; color: #fff; }
+    .restaurant-header { border-radius: var(--radius-lg); padding: 40px 32px; margin-bottom: 8px; color: #fff; background: linear-gradient(135deg, #1A1A2E, #16213E); position: relative; overflow: hidden; }
+    .rh-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+    .rh-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); z-index: 1; }
+    .rh-content { position: relative; z-index: 2; }
     .rh-content h1 { font-size: 2rem; font-weight: 800; }
     .rh-content p { color: #d1d5db; margin: 8px 0 16px; }
     .rh-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: #e5e7eb; font-size: 0.9rem; }
     .cat-title { font-size: 1.3rem; font-weight: 700; padding-bottom: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
     .menu-item-card:hover { transform: none; }
-    .mi-info { flex: 1; }
+    .mi-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .mi-info { flex: 1; min-width: 0; }
     .mi-info h4 { font-size: 1rem; margin: 6px 0 2px; }
-    .mi-action { display: flex; align-items: center; }
+    .mi-action-row { display: flex; align-items: center; }
+    .mi-image-wrap { flex-shrink: 0; width: 96px; height: 96px; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+    .mi-image { width: 100%; height: 100%; object-fit: cover; display: block; }
     .sticky-cart-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4); display: flex; align-items: center; gap: 16px; font-weight: 700; z-index: 1000; animation: slideUp 0.3s ease; }
     .btn-light { background: #fff; color: var(--primary); border: none; font-weight: bold; }
     @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 24px; opacity: 1; } }
@@ -147,6 +169,20 @@ export class RestaurantDetailComponent implements OnInit {
   }
 
   toggleVeg() { this.vegOnly = !this.vegOnly; }
+
+  onBannerError(event: Event) {
+    // If the banner image fails (hotlink block, 404 etc.), hide it — gradient fallback shows
+    (event.target as HTMLElement).style.display = 'none';
+    const overlay = (event.target as HTMLElement).nextElementSibling as HTMLElement;
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  /** Hide the image container entirely if the URL fails to load (e.g. Google hotlink block, 403, 404) */
+  onImgError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    const wrapper = img.closest('.mi-image-wrap') as HTMLElement;
+    if (wrapper) wrapper.style.display = 'none';
+  }
 
   getFilteredItems(cat: CategoryResponse): MenuItemResponse[] {
     return this.vegOnly ? (cat.items || []).filter(i => i.isVeg) : (cat.items || []);

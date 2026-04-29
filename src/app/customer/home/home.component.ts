@@ -65,6 +65,9 @@ import { RestaurantResponse } from '../../core/models/api.models';
           @for (r of filteredRestaurants; track r.restaurantId) {
             <a [routerLink]="['/restaurant', r.restaurantId]" class="card restaurant-card">
               <div class="restaurant-img" [style.background]="getGradient(r.cuisine)">
+                @if (r.imageUrl) {
+                  <img [src]="r.imageUrl" class="restaurant-img-bg" alt="" (error)="onCardImgError($event)" />
+                }
                 <span class="cuisine-badge">{{ r.cuisine }}</span>
                 @if (!r.isOpen) { <span class="closed-badge">Closed</span> }
               </div>
@@ -94,9 +97,10 @@ import { RestaurantResponse } from '../../core/models/api.models';
     .chip { padding: 8px 20px; border: 2px solid var(--border); border-radius: var(--radius-pill); background: #fff; font-family: var(--font); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: var(--transition); }
     .chip:hover, .chip.active { border-color: var(--primary); background: var(--primary); color: #fff; }
     .restaurant-card { text-decoration: none; color: inherit; }
-    .restaurant-img { height: 160px; display: flex; align-items: flex-start; justify-content: space-between; padding: 12px; }
-    .cuisine-badge { background: rgba(255,255,255,0.9); padding: 4px 12px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 600; }
-    .closed-badge { background: var(--error); color: #fff; padding: 4px 12px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 600; }
+    .restaurant-img { height: 160px; position: relative; overflow: hidden; display: flex; align-items: flex-start; justify-content: space-between; padding: 12px; }
+    .restaurant-img-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+    .cuisine-badge { position: relative; z-index: 1; background: rgba(255,255,255,0.9); padding: 4px 12px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 600; }
+    .closed-badge { position: relative; z-index: 1; background: var(--error); color: #fff; padding: 4px 12px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 600; }
     .restaurant-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
     @media (max-width: 768px) { .hero-content h1 { font-size: 2rem; } }
   `]
@@ -157,11 +161,40 @@ export class HomeComponent implements OnInit {
   }
 
   onSearch() {
-    if (!this.searchQuery.trim()) { this.clearSearch(); return; }
+    const q = this.searchQuery.trim();
+    if (!q) { this.clearSearch(); return; }
     this.loading = true;
-    this.restaurantApi.search(this.searchQuery).subscribe({
-      next: (data) => { this.allRestaurants = data; this.selectedCuisine = ''; this.applyFilters(); this.loading = false; },
-      error: () => { this.loading = false; }
+    this.restaurantApi.search(q).subscribe({
+      next: (apiData) => {
+        // Also filter the currently-loaded city list locally for broader matching
+        const lq = q.toLowerCase();
+        const localMatches = this.allRestaurants.filter(r =>
+          r.name.toLowerCase().includes(lq) ||
+          r.cuisine.toLowerCase().includes(lq) ||
+          (r.description && r.description.toLowerCase().includes(lq))
+        );
+        // Merge API results + local matches, deduplicated by restaurantId
+        const merged = [...apiData];
+        localMatches.forEach(r => {
+          if (!merged.find(m => m.restaurantId === r.restaurantId)) merged.push(r);
+        });
+        this.selectedCuisine = '';
+        this.allRestaurants = merged;
+        this.applyFilters();
+        this.loading = false;
+      },
+      error: () => {
+        // API failed — fall back to local filtering only
+        const lq = q.toLowerCase();
+        const localMatches = this.allRestaurants.filter(r =>
+          r.name.toLowerCase().includes(lq) ||
+          r.cuisine.toLowerCase().includes(lq) ||
+          (r.description && r.description.toLowerCase().includes(lq))
+        );
+        this.selectedCuisine = '';
+        this.filteredRestaurants = localMatches;
+        this.loading = false;
+      }
     });
   }
 
@@ -188,6 +221,11 @@ export class HomeComponent implements OnInit {
     result.sort((a,b) => (b.isOpen ? 1 : 0) - (a.isOpen ? 1 : 0));
     
     this.filteredRestaurants = result;
+  }
+
+  onCardImgError(event: Event) {
+    // If card image fails to load, hide it — gradient fallback stays visible
+    (event.target as HTMLElement).style.display = 'none';
   }
 
   getGradient(cuisine: string): string {

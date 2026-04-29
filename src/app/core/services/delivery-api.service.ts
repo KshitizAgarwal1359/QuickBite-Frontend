@@ -11,6 +11,7 @@ export class DeliveryApiService {
 
   registerAgent(request: AgentRegistrationRequest): Observable<AgentResponse> { return this.http.post<AgentResponse>(`${this.baseUrl}/register`, request); }
   getAgent(id: number): Observable<AgentResponse> { return this.http.get<AgentResponse>(`${this.baseUrl}/${id}`); }
+  getMyProfile(): Observable<AgentResponse> { return this.http.get<AgentResponse>(`${this.baseUrl}/me`); }
   getAllAgents(): Observable<AgentResponse[]> { return this.http.get<AgentResponse[]>(`${this.baseUrl}/all`); }
   getNearby(lat: number, lng: number, radius: number = 5): Observable<AgentDistanceResponse[]> { return this.http.get<AgentDistanceResponse[]>(`${this.baseUrl}/nearby?latitude=${lat}&longitude=${lng}&radiusInKm=${radius}`); }
   updateLocation(id: number, request: LocationUpdateRequest): Observable<AgentResponse> { return this.http.put<AgentResponse>(`${this.baseUrl}/${id}/location`, request); }

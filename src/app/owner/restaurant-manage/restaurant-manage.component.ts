@@ -13,13 +13,14 @@ import { ToastService } from '../../core/services/toast.service';
     <div class="page container">
       <div class="page-header"><h1>{{ isEdit ? '🏪 Edit Restaurant' : '🏪 Register Restaurant' }}</h1></div>
       <div class="card" style="max-width:700px"><div class="card-body">
-        <form (ngSubmit)="onSubmit()">
+        <form (ngSubmit)="onSubmit()" novalidate>
           <div class="form-group"><label>Restaurant Name</label><input type="text" class="form-control" [(ngModel)]="form.name" name="name" required /></div>
           <div class="form-group"><label>Description</label><input type="text" class="form-control" [(ngModel)]="form.description" name="desc" /></div>
           <div class="form-group"><label>Cuisine Type</label>
             <select class="form-control" [(ngModel)]="form.cuisine" name="cuisine"><option value="Indian">Indian</option><option value="Chinese">Chinese</option><option value="Italian">Italian</option><option value="Mexican">Mexican</option><option value="Continental">Continental</option></select>
           </div>
           <div class="form-group"><label>Phone</label><input type="tel" class="form-control" [(ngModel)]="form.phone" name="phone" required /></div>
+          <div class="form-group"><label>Image URL <span class="text-muted text-sm">(optional – paste a direct image link e.g. Unsplash)</span></label><input type="text" class="form-control" [(ngModel)]="form.imageUrl" name="imageUrl" placeholder="https://images.unsplash.com/photo-..." /></div>
           <div class="form-group"><label>Address</label><input type="text" class="form-control" [(ngModel)]="form.address" name="addr" required /></div>
           <div style="display:grid;grid-template-columns:1fr;gap:12px">
             <div class="form-group"><label>City</label><input type="text" class="form-control" [(ngModel)]="form.city" name="city" required /></div>
@@ -44,7 +45,7 @@ import { ToastService } from '../../core/services/toast.service';
   `
 })
 export class RestaurantManageComponent {
-  form: any = { name: '', description: '', cuisine: 'Indian', phone: '', address: '', city: '', latitude: 19.076, longitude: 72.877, deliveryRadius: 5.0, minOrderAmount: 0, estimatedDeliveryMin: 30 };
+  form: any = { name: '', description: '', cuisine: 'Indian', phone: '', imageUrl: '', address: '', city: '', latitude: 19.076, longitude: 72.877, deliveryRadius: 5.0, minOrderAmount: 0, estimatedDeliveryMin: 30 };
   loading = false;
   fetching = false;
   isEdit = false;
@@ -91,6 +92,7 @@ export class RestaurantManageComponent {
         city: this.form.city,
         latitude: this.form.latitude,
         longitude: this.form.longitude,
+        imageUrl: this.form.imageUrl,
         deliveryRadius: this.form.deliveryRadius,
         minOrderAmount: this.form.minOrderAmount,
         estimatedDeliveryMin: this.form.estimatedDeliveryMin

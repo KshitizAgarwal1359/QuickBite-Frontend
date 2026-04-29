@@ -8,8 +8,8 @@ export interface UserProfile { userId: number; fullName: string; email: string; 
 
 // ─── Restaurant ──────────────────────────────────────────────────────────
 export interface RegisterRestaurantRequest { name: string; description: string; cuisine: string; address: string; city: string; latitude: number; longitude: number; phone?: string; deliveryRadius: number; minOrderAmount: number; estimatedDeliveryMin: number; }
-export interface UpdateRestaurantRequest { name?: string; description?: string; cuisine?: string; address?: string; city?: string; latitude?: number; longitude?: number; phone?: string; deliveryRadius?: number; minOrderAmount?: number; estimatedDeliveryMin?: number; }
-export interface RestaurantResponse { restaurantId: number; ownerId: number; name: string; description: string; cuisine: string; address: string; city: string; latitude: number; longitude: number; phone?: string; avgRating: number; isApproved: boolean; isOpen: boolean; deliveryRadius: number; minOrderAmount: number; estimatedDeliveryMin: number; }
+export interface UpdateRestaurantRequest { name?: string; description?: string; cuisine?: string; address?: string; city?: string; latitude?: number; longitude?: number; phone?: string; imageUrl?: string; deliveryRadius?: number; minOrderAmount?: number; estimatedDeliveryMin?: number; }
+export interface RestaurantResponse { restaurantId: number; ownerId: number; name: string; description: string; cuisine: string; address: string; city: string; latitude: number; longitude: number; phone?: string; imageUrl?: string; avgRating: number; isApproved: boolean; isOpen: boolean; deliveryRadius: number; minOrderAmount: number; estimatedDeliveryMin: number; }
 
 // ─── Menu ────────────────────────────────────────────────────────────────
 export interface AddCategoryRequest { restaurantId: number; name: string; description?: string; imageUrl?: string; displayOrder?: number; }
