@@ -19,7 +19,7 @@ import { catchError } from 'rxjs/operators';
           <h1>📦 Active Orders</h1>
           <p>All active orders across the platform — assign agents and manage status</p>
         </div>
-        <button class="btn btn-outline btn-sm" (click)="loadOrders()">🔄 Refresh Orders</button>
+        <button class="btn btn-outline btn-sm" (click)="loadOrders(); loadAgents()">🔄 Refresh</button>
       </div>
       @if (loading) { <div class="loading-spinner"></div> }
       @else if (orders.length === 0) { <div class="empty-state"><h3>No active orders</h3></div> }
@@ -102,7 +102,7 @@ export class ActiveOrdersComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadOrders();
     this.loadAgents();
-    this.pollInterval = setInterval(() => { this.loadOrders(false); }, 30000);
+    this.pollInterval = setInterval(() => { this.loadOrders(false); this.loadAgents(); }, 30000);
   }
 
   ngOnDestroy() {
