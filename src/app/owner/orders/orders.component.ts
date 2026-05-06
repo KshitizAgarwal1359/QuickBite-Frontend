@@ -91,12 +91,12 @@ export class OwnerOrdersComponent implements OnInit, OnDestroy {
   }
 
   cancelOrder(order: OrderResponse) {
-    if (!confirm(`Are you sure you want to cancel Order #${order.orderId}?`)) return;
-    this.orderApi.cancelOrder(order.orderId).subscribe({
+    if (!confirm(`Are you sure you want to cancel Order #${order.orderId}? If payment was made, a refund will be initiated.`)) return;
+    this.orderApi.cancelOrderByOwner(order.orderId, this.restId).subscribe({
       next: (o) => {
         order.orderStatus = o.orderStatus;
         this.orders = this.sortOrders([...this.orders]);
-        this.toast.info('Order cancelled');
+        this.toast.info(`Order #${order.orderId} cancelled${order.modeOfPayment !== 'COD' ? ' — refund initiated' : ''}`);
       },
       error: (e) => this.toast.error(e.error?.message || 'Failed to cancel order')
     });

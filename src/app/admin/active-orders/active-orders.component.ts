@@ -56,13 +56,13 @@ import { catchError } from 'rxjs/operators';
                     <select class="form-control" style="max-width:250px" [(ngModel)]="selectedAgentId[order.orderId]">
                       <option [ngValue]="0" disabled>Select an agent</option>
                       @for (agent of availableAgents; track agent.agentId) {
-                        <option [ngValue]="agent.agentId">{{ agent.fullName }} (#{{ agent.agentId }}) — {{ agent.vehicleType }}</option>
+                        <option [ngValue]="agent.agentId">{{ agent.fullName }} (#{{ agent.agentId }}) — {{ agent.vehicleType }} {{ agent.isAvailable ? '🟢 Online' : '🔴 Offline' }}</option>
                       }
                     </select>
                     <button class="btn btn-primary btn-sm" (click)="assignAgent(order)" [disabled]="!selectedAgentId[order.orderId]">Assign</button>
                   </div>
                   @if (availableAgents.length === 0) {
-                    <p class="text-sm text-muted mt-4">No verified & available agents found.</p>
+                    <p class="text-sm text-muted mt-4">No verified & online agents available right now.</p>
                   }
                 }
               </div>
@@ -120,9 +120,8 @@ export class ActiveOrdersComponent implements OnInit, OnDestroy {
   loadAgents() {
     this.deliveryApi.getAllAgents().subscribe({
       next: (agents) => {
-        this.availableAgents = agents
-          .filter(a => a.isVerified)
-          .sort((a, b) => (b.isAvailable ? 1 : 0) - (a.isAvailable ? 1 : 0));
+        // Only show agents that are BOTH verified AND currently online (isAvailable)
+        this.availableAgents = agents.filter(a => a.isVerified && a.isAvailable);
       }
     });
   }

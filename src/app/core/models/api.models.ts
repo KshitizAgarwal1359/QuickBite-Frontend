@@ -52,3 +52,11 @@ export interface AgentDistanceResponse extends AgentResponse { distanceInKm: num
 
 // ─── Generic ─────────────────────────────────────────────────────────────
 export interface ApiError { statusCode: number; message: string; timestamp: string; }
+
+// ─── Review ──────────────────────────────────────────────────────────────
+export interface CreateReviewRequest { orderId: number; restaurantId: number; agentId?: number; foodRating: number; deliveryRating: number; comment?: string; }
+export interface UpdateReviewRequest { foodRating: number; deliveryRating: number; comment?: string; }
+export interface ReviewResponse { reviewId: number; orderId: number; customerId: number; restaurantId: number; agentId?: number; foodRating: number; deliveryRating: number; comment?: string; reviewDate: string; isVerifiedOnly: boolean; }
+
+// ─── Notification ─────────────────────────────────────────────────────────
+export interface NotificationItem { notificationId: number; recipientId: number; type: string; title: string; message: string; channel: string; relatedId?: number; relatedType?: string; isRead: boolean; sentAt: string; }

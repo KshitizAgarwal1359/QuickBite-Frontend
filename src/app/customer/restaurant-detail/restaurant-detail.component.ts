@@ -6,7 +6,8 @@ import { RestaurantApiService } from '../../core/services/restaurant-api.service
 import { CartApiService } from '../../core/services/cart-api.service';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { ToastService } from '../../core/services/toast.service';
-import { CategoryResponse, RestaurantResponse, MenuItemResponse } from '../../core/models/api.models';
+import { ReviewApiService } from '../../core/services/review-api.service';
+import { CategoryResponse, RestaurantResponse, MenuItemResponse, ReviewResponse } from '../../core/models/api.models';
 import { forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
@@ -30,6 +31,12 @@ import { catchError, finalize } from 'rxjs/operators';
               <span class="badge badge-info">{{ restaurant.cuisine }}</span>
               <span>~{{ restaurant.estimatedDeliveryMin }} mins delivery</span>
               <span [class]="restaurant.isOpen ? 'badge badge-success' : 'badge badge-error'">{{ restaurant.isOpen ? 'Open' : 'Closed' }}</span>
+              <!-- Rating display -->
+              @if (restaurant.avgRating && restaurant.avgRating > 0) {
+                <span class="rh-rating">⭐ {{ restaurant.avgRating | number:'1.1-1' }} / 5.0</span>
+              } @else {
+                <span class="rh-rating not-rated">⭐ Not rated yet</span>
+              }
             </div>
           </div>
         </div>
@@ -106,6 +113,29 @@ import { catchError, finalize } from 'rxjs/operators';
           <button class="btn btn-sm btn-light" (click)="goToCart()">View Cart →</button>
         </div>
       }
+
+      <!-- Reviews Section -->
+      @if (restaurant && reviews.length > 0) {
+        <div class="reviews-section mt-32">
+          <h2 class="mb-16">⭐ Customer Reviews ({{ reviews.length }})</h2>
+          <div class="reviews-list">
+            @for (review of reviews; track review.reviewId) {
+              <div class="review-tile card">
+                <div class="card-body">
+                  <div class="review-tile-header">
+                    <div class="review-stars">{{ renderStars(review.foodRating) }}</div>
+                    <span class="text-muted text-sm">{{ review.reviewDate | date:'mediumDate' }}</span>
+                  </div>
+                  @if (review.comment) { <p class="review-text mt-8">"{{ review.comment }}"</p> }
+                  @if (review.agentId) {
+                    <p class="text-sm text-muted mt-4">🚴 Delivery: {{ renderStars(review.deliveryRating) }}</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -116,6 +146,8 @@ import { catchError, finalize } from 'rxjs/operators';
     .rh-content h1 { font-size: 2rem; font-weight: 800; }
     .rh-content p { color: #d1d5db; margin: 8px 0 16px; }
     .rh-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: #e5e7eb; font-size: 0.9rem; }
+    .rh-rating { font-size: 0.9rem; font-weight: 600; background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 20px; }
+    .rh-rating.not-rated { opacity: 0.75; font-style: italic; font-weight: 400; }
     .cat-title { font-size: 1.3rem; font-weight: 700; padding-bottom: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
     .menu-item-card:hover { transform: none; }
     .mi-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -127,28 +159,46 @@ import { catchError, finalize } from 'rxjs/operators';
     .sticky-cart-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4); display: flex; align-items: center; gap: 16px; font-weight: 700; z-index: 1000; animation: slideUp 0.3s ease; }
     .btn-light { background: #fff; color: var(--primary); border: none; font-weight: bold; }
     @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 24px; opacity: 1; } }
+    .reviews-section { max-width: 900px; }
+    .reviews-list { display: flex; flex-direction: column; gap: 12px; }
+    .review-tile:hover { transform: none; }
+    .review-tile-header { display: flex; justify-content: space-between; align-items: center; }
+    .review-stars { color: #f59e0b; font-size: 1.1rem; letter-spacing: 2px; }
+    .review-text { color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
   `]
 })
 export class RestaurantDetailComponent implements OnInit {
   restaurant: RestaurantResponse | null = null;
   categories: CategoryResponse[] = [];
+  reviews: ReviewResponse[] = [];
   loading = true; vegOnly = false;
   cartItemCount = 0;
 
-  constructor(private route: ActivatedRoute, private router: Router, private menuApi: MenuApiService, private restApi: RestaurantApiService, private cartApi: CartApiService, private auth: AuthApiService, private toast: ToastService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private menuApi: MenuApiService,
+    private restApi: RestaurantApiService,
+    private cartApi: CartApiService,
+    private auth: AuthApiService,
+    private toast: ToastService,
+    private reviewApi: ReviewApiService
+  ) {}
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     
     forkJoin({
       rest: this.restApi.getById(id).pipe(catchError(() => of(null))),
-      menu: this.menuApi.getFullMenu(id).pipe(catchError(() => of([])))
+      menu: this.menuApi.getFullMenu(id).pipe(catchError(() => of([]))),
+      reviews: this.reviewApi.getByRestaurant(id).pipe(catchError(() => of([])))
     }).pipe(
       finalize(() => this.loading = false)
     ).subscribe({
       next: (res) => {
         this.restaurant = res.rest;
         this.categories = res.menu;
+        this.reviews = res.reviews;
       }
     });
 
@@ -183,6 +233,8 @@ export class RestaurantDetailComponent implements OnInit {
     const wrapper = img.closest('.mi-image-wrap') as HTMLElement;
     if (wrapper) wrapper.style.display = 'none';
   }
+
+  renderStars(rating: number): string { return '★'.repeat(rating) + '☆'.repeat(5 - rating); }
 
   getFilteredItems(cat: CategoryResponse): MenuItemResponse[] {
     return this.vegOnly ? (cat.items || []).filter(i => i.isVeg) : (cat.items || []);
