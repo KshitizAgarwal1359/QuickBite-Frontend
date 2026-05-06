@@ -19,6 +19,7 @@ export class OrderApiService {
   cancelOrder(id: number): Observable<OrderResponse> { return this.http.put<OrderResponse>(`${this.baseUrl}/${id}/cancel`, {}); }
   cancelOrderByOwner(id: number, restaurantId: number): Observable<OrderResponse> { return this.http.put<OrderResponse>(`${this.baseUrl}/${id}/cancel/owner?restaurantId=${restaurantId}`, {}); }
   reorder(id: number): Observable<PlaceOrderRequest> { return this.http.post<PlaceOrderRequest>(`${this.baseUrl}/${id}/reorder`, {}); }
+  confirmReceipt(id: number): Observable<OrderResponse> { return this.http.put<OrderResponse>(`${this.baseUrl}/${id}/confirm-receipt`, {}); }
   getAgentOrders(agentId: number): Observable<OrderResponse[]> { return this.http.get<OrderResponse[]>(`${this.baseUrl}/agent/${agentId}`); }
   getOrderCount(restId: number): Observable<number> { return this.http.get<number>(`${this.baseUrl}/count/${restId}`); }
 }

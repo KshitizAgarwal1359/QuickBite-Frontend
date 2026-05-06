@@ -79,7 +79,11 @@ declare var L: any;
               </div>
             }
 
-            @if ((order.orderStatus === 'PICKED_UP' || order.orderStatus === 'DELIVERED') && agent) {
+            @if (order.orderStatus === 'PICKED_UP') {
+              <button class="btn btn-success btn-block mt-16 mb-8" (click)="confirmReceipt()" style="font-size: 1.1rem; padding: 12px;">✅ I Have Received My Order</button>
+            }
+
+            @if ((order.orderStatus === 'PICKED_UP' || order.orderStatus === 'CUSTOMER_RECEIVED' || order.orderStatus === 'DELIVERED') && agent) {
               <div class="live-map mt-24">
                 <h4>Live Tracking</h4>
                 <div id="tracking-map" class="map-container mt-8">
@@ -92,7 +96,7 @@ declare var L: any;
           </div></div>
 
           <!-- ─── Review Section ─────────────────────────────────────────────── -->
-          @if (order.orderStatus === 'DELIVERED') {
+          @if (order.orderStatus === 'CUSTOMER_RECEIVED' || order.orderStatus === 'DELIVERED') {
             <div class="card mt-24 review-card">
               <div class="card-body">
                 @if (existingReview) {
@@ -209,7 +213,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
   order: OrderResponse | null = null; loading = true;
   agent: AgentResponse | null = null;
   agentLocation: { lat: number, lng: number } | null = null;
-  statusSteps = ['PLACED', 'CONFIRMED', 'PREPARING', 'PICKED_UP', 'DELIVERED'];
+  statusSteps = ['PLACED', 'CONFIRMED', 'PREPARING', 'PICKED_UP', 'CUSTOMER_RECEIVED', 'DELIVERED'];
   estimatedMin: number | null = null;
 
   // Review
@@ -385,6 +389,18 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
     this.orderApi.cancelOrder(this.order!.orderId).subscribe({
       next: (o) => { this.order = o; this.toast.info('Order cancelled'); this.destroy$.next(); },
       error: (e) => this.toast.error(e.error?.message || 'Failed')
+    });
+  }
+
+  confirmReceipt() {
+    if (!confirm('Are you sure you want to confirm you have received the order?')) return;
+    this.orderApi.confirmReceipt(this.order!.orderId).subscribe({
+      next: (o) => {
+        this.order = o;
+        this.toast.success('Order confirmed as received! Thank you.');
+        this.disconnectSignalR();
+      },
+      error: (e) => this.toast.error(e.error?.message || 'Failed to confirm receipt')
     });
   }
 }

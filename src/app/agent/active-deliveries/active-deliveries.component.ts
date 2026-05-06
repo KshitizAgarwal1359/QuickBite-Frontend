@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DeliveryApiService } from '../../core/services/delivery-api.service';
 import { OrderApiService } from '../../core/services/order-api.service';
@@ -33,7 +33,14 @@ import { OrderResponse } from '../../core/models/api.models';
                 <p class="text-sm mt-4"><strong>Deliver to:</strong> {{ order.deliveryAddress }}</p>
                 <p class="text-sm mt-4"><strong>Total Amount:</strong> ₹{{ order.finalAmount }}</p>
                 <div class="mt-16">
-                  <button class="btn btn-success btn-block" (click)="completeDelivery(order.orderId)">✓ Complete Delivery</button>
+                  @if (order.orderStatus === 'CUSTOMER_RECEIVED') {
+                    <button class="btn btn-success btn-block" (click)="completeDelivery(order)">✓ Complete Delivery</button>
+                  } @else if (order.orderStatus === 'PICKED_UP') {
+                    <p class="text-sm text-warning" style="margin-bottom: 8px; font-weight: 500; color: #f59e0b;">🕒 Waiting for customer to confirm receipt...</p>
+                    <button class="btn btn-success btn-block" disabled style="opacity: 0.6; cursor: not-allowed;">✓ Complete Delivery</button>
+                  } @else {
+                    <p class="text-sm text-muted">Status: {{ order.orderStatus }}</p>
+                  }
                 </div>
               </div>
             </div>
@@ -43,10 +50,11 @@ import { OrderResponse } from '../../core/models/api.models';
     </div>
   `
 })
-export class AgentActiveDeliveriesComponent implements OnInit {
+export class AgentActiveDeliveriesComponent implements OnInit, OnDestroy {
   orders: OrderResponse[] = [];
   loading = true;
   agentId: number | null = null;
+  pollInterval: any;
 
   constructor(
     private deliveryApi: DeliveryApiService,
@@ -62,6 +70,7 @@ export class AgentActiveDeliveriesComponent implements OnInit {
         this.agentId = agent.agentId;
         sessionStorage.setItem('qb_agent_id', agent.agentId.toString());
         this.loadDeliveries();
+        this.pollInterval = setInterval(() => { this.loadDeliveries(false); }, 15000);
       },
       error: () => {
         // Agent has not registered yet
@@ -70,9 +79,13 @@ export class AgentActiveDeliveriesComponent implements OnInit {
     });
   }
 
-  loadDeliveries() {
+  ngOnDestroy() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
+  }
+
+  loadDeliveries(showSpinner = true) {
     if (!this.agentId) return;
-    this.loading = true;
+    if (showSpinner) this.loading = true;
     // Query Order Service directly for orders assigned to this agent
     this.orderApi.getAgentOrders(this.agentId).subscribe({
       next: (orders) => {
@@ -86,14 +99,25 @@ export class AgentActiveDeliveriesComponent implements OnInit {
     });
   }
 
-  completeDelivery(orderId: number) {
+  completeDelivery(order: OrderResponse) {
     if (!this.agentId) return;
-    this.deliveryApi.completeDelivery(this.agentId, { orderId }).subscribe({
+    
+    // First update the order status to DELIVERED
+    this.orderApi.updateStatus(order.orderId, { orderStatus: 'DELIVERED' }).subscribe({
       next: () => {
-        this.toast.success('Delivery marked as complete!');
-        this.orders = this.orders.filter(o => o.orderId !== orderId);
+        // Then complete delivery in the delivery service to increment stats
+        this.deliveryApi.completeDelivery(this.agentId!, { orderId: order.orderId }).subscribe({
+          next: () => {
+            this.toast.success('Delivery marked as complete!');
+            this.orders = this.orders.filter(o => o.orderId !== order.orderId);
+          },
+          error: (e) => {
+            this.toast.error('Partially completed: ' + (e.error?.message || 'Failed to update agent stats'));
+            this.orders = this.orders.filter(o => o.orderId !== order.orderId);
+          }
+        });
       },
-      error: (e) => this.toast.error(e.error?.message || 'Failed to complete delivery')
+      error: (e) => this.toast.error(e.error?.message || 'Failed to update order status')
     });
   }
 }

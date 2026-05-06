@@ -77,7 +77,7 @@ export class OwnerOrdersComponent implements OnInit, OnDestroy {
     });
   }
 
-  getColor(s: string): string { const m: Record<string, string> = { PLACED: 'info', CONFIRMED: 'info', PREPARING: 'warning', PICKED_UP: 'warning', DELIVERED: 'success', CANCELLED: 'error' }; return m[s] || 'info'; }
+  getColor(s: string): string { const m: Record<string, string> = { PLACED: 'info', CONFIRMED: 'info', PREPARING: 'warning', PICKED_UP: 'warning', CUSTOMER_RECEIVED: 'success', DELIVERED: 'success', CANCELLED: 'error' }; return m[s] || 'info'; }
   
   updateStatus(order: OrderResponse, status: string) { 
     this.orderApi.updateStatus(order.orderId, { orderStatus: status }).subscribe({ 

@@ -69,10 +69,7 @@ import { catchError } from 'rxjs/operators';
 
               <!-- Status Controls -->
               <div class="flex gap-8 mt-12">
-                @if (order.orderStatus === 'PLACED') { <button class="btn btn-success btn-sm" (click)="updateStatus(order, 'CONFIRMED')">Confirm</button> }
-                @if (order.orderStatus === 'CONFIRMED') { <button class="btn btn-accent btn-sm" (click)="updateStatus(order, 'PREPARING')">Start Preparing</button> }
-                @if (order.orderStatus === 'PREPARING') { <button class="btn btn-primary btn-sm" (click)="updateStatus(order, 'PICKED_UP')">Out for Delivery (Picked Up)</button> }
-                @if (order.orderStatus === 'PICKED_UP') { <button class="btn btn-success btn-sm" (click)="updateStatus(order, 'DELIVERED')">Mark Delivered</button> }
+                @if (order.orderStatus === 'CUSTOMER_RECEIVED') { <button class="btn btn-success btn-sm" (click)="updateStatus(order, 'DELIVERED')">Mark Delivered</button> }
                 @if (order.orderStatus !== 'CANCELLED' && order.orderStatus !== 'DELIVERED') {
                   <button class="btn btn-danger btn-sm" (click)="cancelOrder(order)">Cancel</button>
                 }
@@ -150,7 +147,7 @@ export class ActiveOrdersComponent implements OnInit, OnDestroy {
   }
 
   getColor(s: string): string {
-    const m: Record<string, string> = { PLACED: 'info', CONFIRMED: 'info', PREPARING: 'warning', PICKED_UP: 'warning', DELIVERED: 'success', CANCELLED: 'error' };
+    const m: Record<string, string> = { PLACED: 'info', CONFIRMED: 'info', PREPARING: 'warning', PICKED_UP: 'warning', CUSTOMER_RECEIVED: 'success', DELIVERED: 'success', CANCELLED: 'error' };
     return m[s] || 'info';
   }
 }
