@@ -1,4 +1,4 @@
-const GATEWAY = 'https://quickbite-api-gateway.onrender.com';
+const GATEWAY = 'https://quickbite-api-gateway-q6bs.onrender.com';
 
 export const environment = {
   production: true,
@@ -20,3 +20,4 @@ export const environment = {
   },
   razorpayKey: 'rzp_test_SgpwVV3UHwWACV'
 };
+
